@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import GameStats from './GameStats.vue';
+import { Swiper, SwiperSlide } from 'swiper/vue';
+import 'swiper/css';
 
-// --- Scroll mobile (global page reste fixe) ---
+// --- Scroll mobile ---
 let startY = 0;
 function onTouchStart(e) { startY = e.touches[0].clientY; }
 function onTouchMove(e) {
@@ -204,19 +206,38 @@ const sortedPlayers = computed(()=>[...props.players].sort((a,b)=>b.totalScore-a
       <hr/>
 
       <div v-for="(dart,index) in darts" :key="index" class="dart-controls">
-        <!-- Carousel horizontal -->
-        <div class="carousel-wrapper">
-          <div class="carousel">
+        <!-- Swiper pour double/triple -->
+        <template v-if="currentTarget==='double' || currentTarget==='triple'">
+          <Swiper
+            :slides-per-view="5"
+            space-between="10"
+            grab-cursor
+            class="dart-swiper"
+          >
+            <SwiperSlide v-for="btn in dartButtonsForTarget(currentTarget)" :key="btn">
+              <button
+                class="dart-button"
+                :class="{active:isActive(darts[index],btn)}"
+                @click="setDart(index,btn)">
+                {{btn}}
+              </button>
+            </SwiperSlide>
+          </Swiper>
+        </template>
+
+        <!-- Boutons classiques pour les autres -->
+        <template v-else>
+          <div class="dart-button-group">
             <button
               v-for="btn in dartButtonsForTarget(currentTarget)"
               :key="btn"
               class="dart-button"
-              :class="[isActive(darts[index],btn)?'active':'']"
+              :class="{active:isActive(darts[index],btn)}"
               @click="setDart(index,btn)">
               {{btn}}
             </button>
           </div>
-        </div>
+        </template>
       </div>
 
       <p id="submitScoreContainer">
@@ -246,8 +267,12 @@ html,body{overscroll-behavior-y:contain;overflow:hidden;height:100%;margin:0;pad
 .score-badge{position:absolute;bottom:-10px;right:-10px;background-color:#2196f3;color:white;padding:4px 9px;border-radius:14px;font-size:0.75rem;font-weight:600;white-space:nowrap;user-select:none;box-shadow:0 0 5px rgba(0,0,0,0.3);}
 .bestscore-badge{background-color:#e91e63;font-weight:bold;}
 .dart-controls{margin:0.5rem 0;display:flex;justify-content:center;align-items:center;gap:6px;}
-.carousel-wrapper{width:100%; overflow-x:auto;}
-.carousel{display:inline-flex;gap:6px;white-space:nowrap;scroll-behavior:smooth;}
+.dart-button-group {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .dart-button{height:70px;min-width:50px;font-size:1.2rem;flex-shrink:0;}
 button.active{background-color:var(--primary,#007BFF);color:white;font-weight:bold;}
 #submitScoreContainer{display:flex;flex-direction:row;justify-content:space-evenly;margin-top:1rem;}
