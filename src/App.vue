@@ -4,8 +4,6 @@ import PlayerSelector from './components/PlayerSelector.vue';
 import Game from './components/Game.vue';
 import Login from './components/Login.vue';
 import ScoreList from './components/RecordedStats.vue'; 
-import GameStats from './components/GameStats.vue';
-
 
 
 const predefinedPlayers = [

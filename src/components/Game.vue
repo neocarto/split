@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import GameStats from './GameStats.vue';
 
-// --- Scroll mobile ---
+// --- Scroll mobile (global page reste fixe) ---
 let startY = 0;
 function onTouchStart(e) { startY = e.touches[0].clientY; }
 function onTouchMove(e) {
@@ -23,6 +23,13 @@ const props = defineProps({
   players: Array,
   role: String
 });
+
+// --- SPLIT visual effect ---
+const showSplit = ref(false);
+function triggerSplit() {
+  showSplit.value = true;
+  setTimeout(() => (showSplit.value = false), 1200);
+}
 
 // --- Rounds & players ---
 const roundsTargets = ["15","16","double","17","18","triple","19","20","Bull’s eye"];
@@ -59,13 +66,14 @@ function setDart(index, value){
   else if(value==="Single") darts.value[index] = 1;
   else if(value==="Double") darts.value[index] = 2;
   else if(value==="Triple") darts.value[index] = 3;
-  else darts.value[index] = value; // number 1-20 or "Bull’s eye"
+  else darts.value[index] = value;
   if(navigator.vibrate) navigator.vibrate(30);
 }
 
 // --- Check active button ---
 function isActive(dartValue, btn){
   if(currentTarget.value==="double"||currentTarget.value==="triple"){
+    if(btn==="Miss") return dartValue===0;
     return dartValue===btn;
   } else {
     if(btn==="Miss") return dartValue===0;
@@ -79,70 +87,58 @@ function isActive(dartValue, btn){
 // --- Current target ---
 const currentTarget = computed(()=>roundsTargets[currentRoundIndex.value]);
 
-// --- Current turn score (for display) ---
-const currentTurnScore = computed(()=>{
-  let score = 0;
-  const base = targetValue(currentTarget.value);
-  darts.value.forEach(d => {
-    if(d===0) score+=0;
-    else if(d===1) score+=base;
-    else if(d===2) score+=base*2;
-    else if(d===3) score+=base*3;
-    else if(d==="Bull’s eye"){
-      if(currentTarget.value==="double") score+=50;
-      else if(currentTarget.value==="triple") score+=75;
-      else score+=25;
-    } else {
-      if(currentTarget.value==="double") score += d*2;
-      else if(currentTarget.value==="triple") score += d*3;
+// --- Compute turn score ---
+function computeTurnScore(dartsArr, target){
+  let score=0;
+  const base = targetValue(target);
+
+  dartsArr.forEach(d => {
+    if(d===0){ 
+      score += 0; 
+    }
+    else if(target === "double"){ 
+      if(d === "Bull’s eye") score += 50;
+      else score += d*2;
+    }
+    else if(target === "triple"){ 
+      if(d === "Bull’s eye") score += 75;
+      else score += d*3;
+    }
+    else { 
+      if(d === 1) score += base;
+      else if(d === 2) score += base*2;
+      else if(d === 3) score += base*3;
+      else if(d === "Bull’s eye") score += 25;
       else score += d;
     }
   });
 
-  // Affichage seulement : si toutes les fléchettes sont miss, on montre la moitié
-  const allMiss = darts.value.every(d => d===0);
-  if(allMiss && score>0) score = Math.ceil(score/2);
-
   return score;
-});
+}
+
+const currentTurnScore = computed(()=> computeTurnScore(darts.value, currentTarget.value));
 
 // --- Submit turn ---
 function submitTurn(){
   if(navigator.vibrate) navigator.vibrate(30);
-
   const player = props.players[currentPlayerIndex.value];
-  player.scores.push([...darts.value]);
 
-  // Calcul du score du tour
-  let turnScore = 0;
-  const base = targetValue(currentTarget.value);
-  darts.value.forEach(d => {
-    if(d===0) turnScore += 0;
-    else if(d===1) turnScore += base;
-    else if(d===2) turnScore += base*2;
-    else if(d===3) turnScore += base*3;
-    else if(d==="Bull’s eye"){
-      if(currentTarget.value==="double") turnScore+=50;
-      else if(currentTarget.value==="triple") turnScore+=75;
-      else turnScore+=25;
-    } else {
-      if(currentTarget.value==="double") turnScore += d*2;
-      else if(currentTarget.value==="triple") turnScore += d*3;
-      else turnScore += d;
-    }
+  player.scores.push({
+    darts: [...darts.value],
+    target: currentTarget.value
   });
 
-  // Split rule : si toutes les fléchettes du tour sont Miss, diviser le total du joueur
-  const allMiss = darts.value.every(d => d===0);
+  const allMiss = darts.value.every(d=>d===0);
+  let turnScore = computeTurnScore(darts.value, currentTarget.value);
   if(allMiss && player.totalScore>0){
     player.totalScore = Math.ceil(player.totalScore/2);
+    triggerSplit();
   } else {
     player.totalScore += turnScore;
   }
 
   darts.value = [0,0,0];
-
-  if(currentPlayerIndex.value<props.players.length-1) currentPlayerIndex.value++;
+  if(currentPlayerIndex.value < props.players.length-1) currentPlayerIndex.value++;
   else{
     currentPlayerIndex.value=0;
     currentRoundIndex.value++;
@@ -162,33 +158,13 @@ function undoTurn(){
   currentRoundIndex.value=roundIndex;
 
   const player = props.players[playerIndex];
-  const lastTurn = player.scores.pop();
-  if(lastTurn){
-    let score=0;
-    const base = targetValue(currentTarget.value);
-    lastTurn.forEach(d => {
-      if(d===0) score+=0;
-      else if(d===1) score+=base;
-      else if(d===2) score+=base*2;
-      else if(d===3) score+=base*3;
-      else if(d==="Bull’s eye"){
-        if(currentTarget.value==="double") score+=50;
-        else if(currentTarget.value==="triple") score+=75;
-        else score+=25;
-      } else {
-        if(currentTarget.value==="double") score += d*2;
-        else if(currentTarget.value==="triple") score += d*3;
-        else score += d;
-      }
-    });
-    const allMiss = lastTurn.every(d => d===0);
-    if(allMiss && player.totalScore>0) player.totalScore = Math.ceil(player.totalScore/2);
-    else player.totalScore -= score;
-  }
+  player.scores.pop();
+  player.totalScore = player.scores.reduce((acc, turn) => acc + computeTurnScore(turn.darts, turn.target), 0);
+
   darts.value=[0,0,0];
 }
 
-// --- Curses ---
+// --- Count curses ---
 function countCurses(){
   props.players[currentPlayerIndex.value].curses++;
 }
@@ -197,13 +173,19 @@ function countCurses(){
 const gameOver = computed(()=>currentRoundIndex.value>=roundsTargets.length);
 const topScore = computed(()=>Math.max(...props.players.map(p=>p.totalScore)));
 const sortedPlayers = computed(()=>[...props.players].sort((a,b)=>b.totalScore-a.totalScore));
-
 </script>
 
 <template>
   <p v-if="role==='admin'" style="font-size:0.8rem;color:gray;text-align:center;margin-bottom:-10px;">
     Partie officielle et enregistrée
   </p>
+
+  <!-- SPLIT overlay -->
+  <transition name="fade">
+    <div v-if="showSplit" class="split-overlay">
+      <div class="split-text">SPLIT 💥</div>
+    </div>
+  </transition>
 
   <div class="container">
     <div v-if="!gameOver">
@@ -222,28 +204,34 @@ const sortedPlayers = computed(()=>[...props.players].sort((a,b)=>b.totalScore-a
       <hr/>
 
       <div v-for="(dart,index) in darts" :key="index" class="dart-controls">
-        <div class="buttons" :class="{'double-triple-grid': currentTarget==='double'||currentTarget==='triple'}">
-          <button
-            v-for="btn in dartButtonsForTarget(currentTarget)"
-            :key="btn"
-            class="dart-button"
-            :class="[isActive(darts[index],btn)?'active':'',(currentTarget==='double'||currentTarget==='triple')?'small-button':'']"
-            @click="setDart(index,btn)">
-            {{btn}}
-          </button>
+        <!-- Carousel horizontal -->
+        <div class="carousel-wrapper">
+          <div class="carousel">
+            <button
+              v-for="btn in dartButtonsForTarget(currentTarget)"
+              :key="btn"
+              class="dart-button"
+              :class="[isActive(darts[index],btn)?'active':'']"
+              @click="setDart(index,btn)">
+              {{btn}}
+            </button>
+          </div>
         </div>
       </div>
 
       <p id="submitScoreContainer">
         <button @click="countCurses" class="curseCounter">🤬 ! {{props.players[currentPlayerIndex].curses}}</button>
-        <button @click="submitTurn" class="validate">Valider ce tour (+{{currentTurnScore}} pts)</button>
+        <button @click="submitTurn" class="validate">
+          <template v-if="darts.every(d => d === 0)">Valider ce tour (SPLIT)</template>
+          <template v-else>Valider ce tour (+{{ currentTurnScore }} pts)</template>
+        </button>
       </p>
 
       <p><button @click="undoTurn" class="undo-button">&#8592;</button></p>
     </div>
 
     <div v-else>
-      <GameStats :sortedPlayers="sortedPlayers" :stats="stats" :role="props.role" @view-scores="$emit('view-scores')"/>
+      <GameStats :sortedPlayers="sortedPlayers" :role="props.role" @view-scores="$emit('view-scores')" @replay="$emit('replay')"/>
     </div>
   </div>
 </template>
@@ -258,13 +246,34 @@ html,body{overscroll-behavior-y:contain;overflow:hidden;height:100%;margin:0;pad
 .score-badge{position:absolute;bottom:-10px;right:-10px;background-color:#2196f3;color:white;padding:4px 9px;border-radius:14px;font-size:0.75rem;font-weight:600;white-space:nowrap;user-select:none;box-shadow:0 0 5px rgba(0,0,0,0.3);}
 .bestscore-badge{background-color:#e91e63;font-weight:bold;}
 .dart-controls{margin:0.5rem 0;display:flex;justify-content:center;align-items:center;gap:6px;}
-.dart-button{height:70px;font-size:1.2rem;display:flex;align-items:center;justify-content:center;}
-.small-button{height:36px;min-width:28px;font-size:0.75rem;padding:2px 2px;}
-.double-triple-grid{display:grid;grid-template-columns:repeat(11,minmax(28px,1fr));gap:4px;justify-items:center;margin-bottom:4px;}
-.buttons{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.carousel-wrapper{width:100%; overflow-x:auto;}
+.carousel{display:inline-flex;gap:6px;white-space:nowrap;scroll-behavior:smooth;}
+.dart-button{height:70px;min-width:50px;font-size:1.2rem;flex-shrink:0;}
 button.active{background-color:var(--primary,#007BFF);color:white;font-weight:bold;}
 #submitScoreContainer{display:flex;flex-direction:row;justify-content:space-evenly;margin-top:1rem;}
 .undo-button{margin-top:1rem;margin-left:12px;background-color:#ccc;color:#333;font-weight:normal;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;}
 .undo-button:hover{background-color:#bbb;}
 .validate{background-color:rgba(233,30,99);}
+
+/* --- SPLIT animation --- */
+.split-overlay{
+  position:fixed;
+  top:0;left:0;width:100%;height:100%;
+  display:flex;justify-content:center;align-items:center;
+  background:rgba(255,0,0,0.1);
+  z-index:999;
+}
+.split-text{
+  font-size:4rem;
+  font-weight:900;
+  color:#e91e63;
+  text-shadow:0 0 20px rgba(255,0,0,0.7);
+  animation:shake 0.3s infinite alternate;
+}
+@keyframes shake{
+  from{transform:translateX(-10px);}
+  to{transform:translateX(10px);}
+}
+.fade-enter-active,.fade-leave-active{transition:opacity 0.5s;}
+.fade-enter-from,.fade-leave-to{opacity:0;}
 </style>

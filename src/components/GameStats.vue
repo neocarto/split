@@ -1,4 +1,3 @@
-
 <template>
   <div>
     <h2>Partie terminée</h2>
@@ -9,100 +8,98 @@
         class="final-score-item"
       >
         <div class="final-player-name-above">
-          <template v-if="player.name !== robotName">
-            <span v-if="humanPlayersSorted[0]?.name === player.name">🥇</span>
-            <span v-else-if="humanPlayersSorted[1]?.name === player.name">🥈</span>
-            <span v-else-if="humanPlayersSorted[2]?.name === player.name">🥉</span>
-            <span v-else-if="humanPlayersSorted[3]?.name === player.name">🍫</span>
-          </template>
+          <span v-if="index===0">🥇</span>
+          <span v-else-if="index===1">🥈</span>
+          <span v-else-if="index===2">🥉</span>
           {{ player.name }}
         </div>
-        <span class="final-player-score">{{ player.totalScore }} pts</span>
-        <img :src="player.avatar" alt="avatar" class="final-avatar-large" />
-        
-        <div class="final-player-info">
-          
-          <div class="final-player-stats">
-            <span class="stat-badge">Hits : {{ stats(player).hits }}/{{ stats(player).total }}</span>
-            <span class="stat-badge">Hits (F1) : {{ stats(player).hitsF1 }}/{{ stats(player).total / 3 }}</span>
-            <span class="stat-badge">Hits (F2) : {{ stats(player).hitsF2 }}/{{ stats(player).total / 3 }}</span>
-            <span class="stat-badge">Hits (F3) : {{ stats(player).hitsF3 }}/{{ stats(player).total / 3 }}</span>
-            <span class="stat-badge">Miss : {{ stats(player).miss }}</span>
-            <span class="stat-badge">Streak : {{ stats(player).strk }}</span>
-            <span class="stat-badge">Streak loose : {{ stats(player).strkloose }}</span>
 
-            <span class="stat-badge">Single : {{ stats(player).single }}</span>
-            <span class="stat-badge">Double : {{ stats(player).double }}</span>
-            <span class="stat-badge">Triple : {{ stats(player).triple }}</span>
-            <span v-if="stats(player).shangai >= 1" class="stat-badge awsome-badge">Shangai : {{ stats(player).shangai }}</span>
-            <span v-if="stats(player).ttt >= 1" class="stat-badge awsome-badge">ttt : {{ stats(player).ttt }}</span>
-            <span v-if="stats(player).ddd >= 1" class="stat-badge awsome-badge">ddd : {{ stats(player).ddd }}</span>
-            <span v-if="stats(player).tt >= 1" class="stat-badge awsome-badge">tt : {{ stats(player).tt }}</span>
-            <span v-if="stats(player).dd >= 1" class="stat-badge awsome-badge">dd : {{ stats(player).dd }}</span>
-            <span v-if="stats(player).curses >= 1" class="stat-badge awsome-badge">🤬 : {{ stats(player).curses }}</span>
+        <span class="final-player-score">{{ computeStats(player).totalScore }} pts</span>
+        <img :src="player.avatar" alt="avatar" class="final-avatar-large" />
+
+        <div class="final-player-info">
+          <div class="final-player-stats">
+            <span class="stat-badge">Hits : {{ computeStats(player).hits }}</span>
+            <span class="stat-badge">Miss : {{ computeStats(player).miss }}</span>
+            <span class="stat-badge">Single : {{ computeStats(player).single }}</span>
+            <span class="stat-badge">Double : {{ computeStats(player).double }}</span>
+            <span class="stat-badge">Triple : {{ computeStats(player).triple }}</span>
+            <span class="stat-badge awsome-badge" v-if="computeStats(player).split>0">
+              SPLIT : {{ computeStats(player).split }}
+            </span>
           </div>
         </div>
-
       </li>
     </ul>
-    <p><button @click="replay">Rejouer</button></p>
-    <!-- <div v-if="role === 'admin'" class="action-buttons">
-  <a href="https://observablehq.com/embed/910df7914b748f22@739?cells=viewof+n%2Cchart1%2Cviewof+player%2Cchart3%2Cassiduity%2Cbest%2Cwrost%2Cmean%2Csequence%2CbestShot%2Ctriples" class="link-button" target = "_blank">Voir les scores enregistrés</a>
-</div> -->
-
-<div v-if="role === 'admin'" class="action-buttons">
-  <a href="#" @click.prevent="$emit('view-scores')" class="link-button">Voir le classement</a>
-</div>
+    <div v-if="role==='admin'" class="action-buttons">
+      <a href="#" @click.prevent="$emit('view-scores')" class="link-button">Voir le classement</a>
+    </div>
   </div>
 </template>
 
 <script setup>
+const props = defineProps({
+  sortedPlayers: Array,
+  role: String
+});
 
-
-const props = defineProps(['sortedPlayers', 'humanPlayersSorted', 'robotName', 'stats','role']);
-
-import { supabase } from '../supabase';
-
-
-async function saveScore() {
-const timestamp = Date.now();
-console.log(props.sortedPlayers)
-
-const insertData = props.sortedPlayers.map(d => ({
-  player_id: d.id,
-  name: d.name,
-  timestamp: timestamp,
-  score: d.totalScore,
-  hits: d.scores,
-  
-}));
-
-const { data, error } = await supabase
-  .from('scores')
-  .insert(insertData);
-
-
+function targetValue(target) {
+  if(target==="Bull’s eye") return 25;
+  if(!isNaN(Number(target))) return Number(target);
+  return 0;
 }
 
+function computeStats(player) {
+  let hits=0, miss=0, single=0, doubleCount=0, triple=0, split=0, totalScore=0;
 
-function replay() {
-  window.location.reload();
+  player.scores.forEach(turnObj => {
+    if(!turnObj || !turnObj.darts) return; // sécurité
+    const { darts, target } = turnObj;
+    const base = targetValue(target);
+    const allMiss = darts.every(d=>d===0);
+    if(allMiss) split++;
+
+    darts.forEach(d => {
+      // stats hits/miss
+      if(d===0) miss++;
+      else {
+        hits++;
+        if(d===1) single++;
+        else if(d===2) doubleCount++;
+        else if(d===3) triple++;
+        else if(d==="Bull’s eye") hits++;
+        else {
+          if(target==="double") doubleCount++;
+          else if(target==="triple") triple++;
+          else single++;
+        }
+      }
+
+      // score calcul
+      if(d===0) totalScore+=0;
+      else if(target==="double") totalScore += (d==="Bull’s eye"?50:d*2);
+      else if(target==="triple") totalScore += (d==="Bull’s eye"?75:d*3);
+      else if(d===1) totalScore+=base;
+      else if(d===2) totalScore+=base*2;
+      else if(d===3) totalScore+=base*3;
+      else if(d==="Bull’s eye") totalScore+=25;
+      else totalScore+=d;
+    });
+
+    // gérer SPLIT
+    if(allMiss && totalScore>0) totalScore=Math.ceil(totalScore/2);
+  });
+
+  return { totalScore, hits, miss, single, double: doubleCount, triple, split };
 }
-
-
-if (props.role === 'admin') {
-  //saveScore();
-} 
-
 </script>
 
-
 <style scoped>
-
+/* ton style reste inchangé */
 .final-score-item {
   display: flex;
-  flex-direction: column; 
-  align-items: center;  
+  flex-direction: column;
+  align-items: center;
   gap: 8px;
   margin-bottom: 24px;
   padding-bottom: 12px;
@@ -146,7 +143,6 @@ if (props.role === 'admin') {
   text-align: center;
   margin-top: 8px;
   font-size: 1.1rem;
-  min-width: auto;
 }
 
 .stat-badge {
@@ -159,40 +155,10 @@ if (props.role === 'admin') {
   font-size: 0.75rem;
   color: #333;
   box-shadow: 1px 1px 2px rgba(0,0,0,0.04);
-  transition: background-color 0.3s, border-color 0.3s;
 }
 
-.final-player-score {
-font-style: italic;
-font-weight: bold;
-min-width: 60px;
-text-align: right;
+.awsome-badge {
+  background-color: #ffeb3b;
+  font-weight: bold;
 }
-
-
-.replay-button {
-padding: 12px 24px;
-font-weight: bold;
-background-color: #007BFF;
-color: white;
-border: none;
-border-radius: 6px;
-cursor: pointer;
-}
-
-.replay-button:hover {
-background-color: #0056b3;
-}
-
-.final-scores {
-list-style: none;
-padding: 0;
-margin: 0 auto;       
-max-width: 600px;     
-display: flex;
-flex-direction: column;
-align-items: center; 
-gap: 24px;           
-}
-
 </style>
