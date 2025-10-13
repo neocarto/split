@@ -204,20 +204,34 @@ const sortedPlayers = computed(()=>[...props.players].sort((a,b)=>b.totalScore-a
       <hr/>
 
       <div v-for="(dart,index) in darts" :key="index" class="dart-controls">
-        <!-- Carousel horizontal -->
-        <div class="carousel-wrapper">
-          <div class="carousel">
-            <button
-              v-for="btn in dartButtonsForTarget(currentTarget)"
-              :key="btn"
-              class="dart-button"
-              :class="[isActive(darts[index],btn)?'active':'']"
-              @click="setDart(index,btn)">
-              {{btn}}
-            </button>
-          </div>
-        </div>
+  <!-- Si c'est un round double/triple : select -->
+  <template v-if="currentTarget==='double' || currentTarget==='triple'">
+    <select
+      v-model="darts[index]"
+      class="dart-select"
+      @change="navigator.vibrate && navigator.vibrate(30)">
+      <option value="0">Miss</option>
+      <option v-for="n in 20" :key="n" :value="n">{{n}}</option>
+      <option value="Bull’s eye">Bull’s eye</option>
+    </select>
+  </template>
+
+  <!-- Sinon, boutons comme avant -->
+  <template v-else>
+    <div class="carousel-wrapper">
+      <div class="carousel">
+        <button
+          v-for="btn in dartButtonsForTarget(currentTarget)"
+          :key="btn"
+          class="dart-button"
+          :class="[isActive(darts[index],btn)?'active':'']"
+          @click="setDart(index,btn)">
+          {{btn}}
+        </button>
       </div>
+    </div>
+  </template>
+</div>
 
       <p id="submitScoreContainer">
         <button @click="countCurses" class="curseCounter">🤬 ! {{props.players[currentPlayerIndex].curses}}</button>
@@ -237,43 +251,214 @@ const sortedPlayers = computed(()=>[...props.players].sort((a,b)=>b.totalScore-a
 </template>
 
 <style scoped>
-html,body{overscroll-behavior-y:contain;overflow:hidden;height:100%;margin:0;padding:0;}
-.container{display:flex;flex-direction:column;align-items:center;padding:20px;text-align:center;box-sizing:border-box;}
-.avatar-lineup{display:inline-flex;flex-wrap:wrap;gap:8px;max-width:400px;padding:8px 0;justify-content:center;}
-.avatar-wrapper{position:relative;display:inline-block;margin-right:12px;}
-.avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;filter:grayscale(30%);opacity:0.6;transition:all 0.3s ease;}
-.avatar.current{filter:none;opacity:1;border:3px solid rgba(233,30,99);transform:scale(1.2);z-index:1;}
-.score-badge{position:absolute;bottom:-10px;right:-10px;background-color:#2196f3;color:white;padding:4px 9px;border-radius:14px;font-size:0.75rem;font-weight:600;white-space:nowrap;user-select:none;box-shadow:0 0 5px rgba(0,0,0,0.3);}
-.bestscore-badge{background-color:#e91e63;font-weight:bold;}
-.dart-controls{margin:0.5rem 0;display:flex;justify-content:center;align-items:center;gap:6px;}
-.carousel-wrapper{width:100%; overflow-x:auto;}
-.carousel{display:inline-flex;gap:6px;white-space:nowrap;scroll-behavior:smooth;}
-.dart-button{height:70px;min-width:50px;font-size:1.2rem;flex-shrink:0;}
-button.active{background-color:var(--primary,#007BFF);color:white;font-weight:bold;}
-#submitScoreContainer{display:flex;flex-direction:row;justify-content:space-evenly;margin-top:1rem;}
-.undo-button{margin-top:1rem;margin-left:12px;background-color:#ccc;color:#333;font-weight:normal;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;}
-.undo-button:hover{background-color:#bbb;}
-.validate{background-color:rgba(233,30,99);}
+html,body {
+  overscroll-behavior-y: contain;
+  overflow: hidden;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* --- Avatars --- */
+.avatar-lineup {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 400px;
+  padding: 8px 0;
+  justify-content: center;
+}
+.avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-right: 12px;
+}
+.avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  filter: grayscale(30%);
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+.avatar.current {
+  filter: none;
+  opacity: 1;
+  border: 3px solid rgba(233,30,99);
+  transform: scale(1.2);
+  z-index: 1;
+}
+.score-badge {
+  position: absolute;
+  bottom: -10px;
+  right: -10px;
+  background-color: #2196f3;
+  color: white;
+  padding: 4px 9px;
+  border-radius: 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+.bestscore-badge {
+  background-color: #e91e63;
+  font-weight: bold;
+}
+
+/* --- Fléchettes --- */
+.dart-controls {
+  margin: 0.5rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.carousel-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.carousel {
+  display: inline-flex;
+  gap: 6px;
+  white-space: nowrap;
+  scroll-behavior: smooth;
+}
+
+.dart-button {
+  height: 70px;
+  min-width: 50px;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+button.active {
+  background-color: var(--primary, #007BFF);
+  color: white;
+  font-weight: bold;
+}
+
+/* --- Boutons du bas --- */
+#submitScoreContainer {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  margin-top: 1rem;
+}
+
+.undo-button {
+  margin-top: 1rem;
+  margin-left: 12px;
+  background-color: #ccc;
+  color: #333;
+  font-weight: normal;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.undo-button:hover {
+  background-color: #bbb;
+}
+.validate {
+  background-color: rgba(233,30,99);
+}
 
 /* --- SPLIT animation --- */
-.split-overlay{
-  position:fixed;
-  top:0;left:0;width:100%;height:100%;
-  display:flex;justify-content:center;align-items:center;
-  background:rgba(255,0,0,0.1);
-  z-index:999;
+.split-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255,0,0,0.1);
+  z-index: 999;
 }
-.split-text{
-  font-size:4rem;
-  font-weight:900;
-  color:#e91e63;
-  text-shadow:0 0 20px rgba(255,0,0,0.7);
-  animation:shake 0.3s infinite alternate;
+.split-text {
+  font-size: 4rem;
+  font-weight: 900;
+  color: #e91e63;
+  text-shadow: 0 0 20px rgba(255,0,0,0.7);
+  animation: shake 0.3s infinite alternate;
 }
-@keyframes shake{
-  from{transform:translateX(-10px);}
-  to{transform:translateX(10px);}
+@keyframes shake {
+  from { transform: translateX(-10px); }
+  to { transform: translateX(10px); }
 }
-.fade-enter-active,.fade-leave-active{transition:opacity 0.5s;}
-.fade-enter-from,.fade-leave-to{opacity:0;}
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+/* --- Menus déroulants pour rounds double/triple --- */
+.dart-select {
+  height: 54px;            
+  min-width: 355px;         
+  font-size: 1.1rem;
+  font-weight: 400;
+  text-align: center;
+  color: white;
+  background-color: #2196f3; 
+  border: 2px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  padding: 0 1rem;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #fff 50%),
+                    linear-gradient(135deg, #fff 50%, transparent 50%);
+  background-position: calc(100% - 18px) center, calc(100% - 13px) center;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat; 
+}
+
+.dart-select:focus {
+  border-color: var(--primary, #1976d2);
+  box-shadow: 0 0 4px rgba(0,123,255,0.5);
+}
+
+/* Quand la liste est ouverte (focus visible sur select) */
+.dart-select:focus-visible,
+.dart-select:focus-within {
+  background-color: #1976d2; /* bleu un peu plus foncé */
+  color: white;
+}
+
+/* Style de la liste déroulée */
+.dart-select option {
+  font-size: 1.1rem;
+  font-weight: 500;
+  background-color:#333; /* fond bleu pour toutes les options */
+  color: white;
+}
+
+/* Style de l’option sélectionnée */
+.dart-select option:checked,
+.dart-select option:focus,
+.dart-select option:hover {
+  background-color: #e0e0e0; /* fond gris clair pour l’option sélectionnée */
+  color: #000;
+}
+
+.round-circle {
+  display: inline-block;  color:  rgba(233,30,99);                 /* texte violet */
+  margin: 1px auto;
+  font-weight: 800;
+  text-align: center;
+}
 </style>
