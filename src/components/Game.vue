@@ -173,6 +173,11 @@ function countCurses(){
 const gameOver = computed(()=>currentRoundIndex.value>=roundsTargets.length);
 const topScore = computed(()=>Math.max(...props.players.map(p=>p.totalScore)));
 const sortedPlayers = computed(()=>[...props.players].sort((a,b)=>b.totalScore-a.totalScore));
+
+
+
+
+
 </script>
 
 <template>

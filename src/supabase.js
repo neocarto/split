@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
-const supabaseUrl = "https://kueodidcmdsxaoctjtug.supabase.co/";
+const supabaseUrl = "https://zbnwiwkyvcnlqblkxomo.supabase.co/";
 const supabaseKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1ZW9kaWRjbWRzeGFvY3RqdHVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NzE0NzYsImV4cCI6MjA2NTI0NzQ3Nn0.zuRgrGhf-PwpeX_1yJaUxXda4-uKw4Fk6gxrhcelpZI";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpibndpd2t5dmNubHFibGt4b21vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMDM2MzUsImV4cCI6MjA3NTg3OTYzNX0.LlL3SDwtMmNXpPF9eN5fq2MamJzuCPJvgBD__8IYMBE";
 export const supabase = createClient(supabaseUrl, supabaseKey);
 const adminEmail = "admin@monapp.local";
 

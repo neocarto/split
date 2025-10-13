@@ -38,10 +38,10 @@
 </template>
 
 <script setup>
-const props = defineProps({
-  sortedPlayers: Array,
-  role: String
-});
+
+const props = defineProps(['sortedPlayers','stats','role']);
+
+
 
 function targetValue(target) {
   if(target==="Bull’s eye") return 25;
@@ -92,6 +92,47 @@ function computeStats(player) {
 
   return { totalScore, hits, miss, single, double: doubleCount, triple, split };
 }
+
+
+
+
+
+import { supabase } from '../supabase';
+
+
+async function saveScore() {
+const timestamp = Date.now();
+
+
+
+const insertData = props.sortedPlayers.map(d => ({
+  name: d.name,
+  timestamp: timestamp,
+  score: d.totalScore,
+  hits: d.scores,
+ 
+}));
+
+
+const { data, error } = await supabase
+  .from('scores')
+  .insert(insertData);
+
+
+}
+
+
+function replay() {
+  window.location.reload();
+}
+
+
+if (props.role === 'admin') {
+  saveScore();
+} 
+
+
+
 </script>
 
 <style scoped>
