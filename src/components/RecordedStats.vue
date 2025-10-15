@@ -10,10 +10,10 @@
       <div class="games-played">Parties jouées : {{ player.games_played }}</div>
       <hr/>
       <ul class="score-stats">
-        <li>⭐ Score moyen : <span class="mean-score">{{ player.mean_score }}</span> pts</li>
+        <li>⭐ Score moyen : <span class="emphase">{{ player.mean_score }}</span> pts</li>
+        <li>💥 Split moyens par partie : <span class="emphase">{{ player.mean_splits }}</span></li>
         <li>👍 Meilleur score : {{ player.best_score }} pts</li>
         <li>👎 Plus mauvais score : {{ player.worst_score }} pts</li>
-        <li>💥 Splits moyens par partie : {{ player.mean_splits }}</li>
         <li>🎯 Flèches réussies par partie : {{ player.mean_hits }}</li>
         <li>❌ Flèches ratées par partie : {{ player.mean_fails }}</li>
       </ul>
@@ -165,7 +165,7 @@ onMounted(() => fetchScores());
   gap: 0.5rem;
 }
 
-.mean-score {
+.emphase {
   font-weight: 700;
   text-decoration: underline;
   color:#e6a400; 
